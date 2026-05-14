@@ -3,7 +3,7 @@ import { readGitDiff } from "./git.mjs";
 
 const DEFAULT_MODEL = "gpt-5.5";
 const FALLBACK_MODEL = "gpt-5.4-mini";
-const allowedToolCommands = ["git:status", "git:diff", "typecheck", "build"];
+const allowedToolCommands = ["git:status", "git:diff", "typecheck", "build", "smoke"];
 
 const agentGuidance = {
   pm: "你是产品 Agent，负责澄清目标、范围、验收标准和用户价值。",
@@ -99,9 +99,9 @@ export async function orchestrateReply({ agents, thread, taskGraph, mode, select
     "",
     `用户最新输入: ${userText}`,
     "",
-    "请用中文回答。优先给出能继续推进项目的具体建议；如果需要工具执行，只能建议这些白名单命令：git:status、git:diff、typecheck、build。",
+    "请用中文回答。优先给出能继续推进项目的具体建议；如果需要工具执行，只能建议这些白名单命令：git:status、git:diff、typecheck、build、smoke。",
     "如果建议工具，请在回答末尾另起一行写标记，例如 [[tool:git:status]] 或 [[tool:typecheck]]。回答不要超过 5 段。",
-    "如果需要同步任务图，可以在回答末尾另起一行写 JSON 标记：[[task:add:{\"id\":\"short-id\",\"title\":\"任务标题\",\"owner\":\"代码 Agent\",\"detail\":\"简短说明\",\"status\":\"todo\",\"dependsOn\":[\"local-api\"],\"acceptanceCommand\":\"typecheck\"}]] 或 [[task:update:{\"id\":\"executor\",\"status\":\"running\",\"acceptanceCommand\":\"typecheck\"}]]。acceptanceCommand 只能是 git:status、git:diff、typecheck、build。只在确有必要时使用，最多 2 条。",
+    "如果需要同步任务图，可以在回答末尾另起一行写 JSON 标记：[[task:add:{\"id\":\"short-id\",\"title\":\"任务标题\",\"owner\":\"代码 Agent\",\"detail\":\"简短说明\",\"status\":\"todo\",\"dependsOn\":[\"local-api\"],\"acceptanceCommand\":\"smoke\"}]] 或 [[task:update:{\"id\":\"executor\",\"status\":\"running\",\"acceptanceCommand\":\"typecheck\"}]]。acceptanceCommand 只能是 git:status、git:diff、typecheck、build、smoke。只在确有必要时使用，最多 2 条。",
   ].join("\n");
 
   try {
@@ -628,6 +628,7 @@ function toolTitle(command) {
     "git:diff": "刷新 Git Diff",
     typecheck: "运行类型检查",
     build: "运行生产构建",
+    smoke: "运行闭环 Smoke",
   }[command];
 }
 
@@ -637,6 +638,7 @@ function toolReason(command) {
     "git:diff": "读取当前代码变更摘要，供 Agent 继续分析。",
     typecheck: "验证 TypeScript 类型是否通过。",
     build: "验证当前前端构建是否可发布。",
+    smoke: "验证本地 API、任务图、产物和执行器入口是否连通。",
   }[command];
 }
 
@@ -662,14 +664,14 @@ function trimTrailingSlash(value) {
 function chooseExecutorAgent(command) {
   if (command.startsWith("git:")) return "code";
   if (command === "build") return "ops";
-  if (command === "typecheck") return "qa";
+  if (command === "typecheck" || command === "smoke") return "qa";
   return "arch";
 }
 
 function chooseAgent(text) {
   const normalized = text.toLowerCase();
   if (/(部署|发布|预览|build|上线|回滚|环境)/i.test(normalized)) return "ops";
-  if (/(测试|验收|bug|失败|质量|用例|typecheck)/i.test(normalized)) return "qa";
+  if (/(测试|验收|bug|失败|质量|用例|typecheck|smoke)/i.test(normalized)) return "qa";
   if (/(代码|diff|git|实现|接口|api|执行器)/i.test(normalized)) return "code";
   if (/(页面|界面|按钮|样式|交互|前端|ui)/i.test(normalized)) return "fe";
   if (/(需求|用户|范围|产品|方案|规划)/i.test(normalized)) return "pm";

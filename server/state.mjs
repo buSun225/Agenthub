@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const workspaceRoot = path.resolve(__dirname, "..");
-const dataDir = path.join(workspaceRoot, ".agenthub");
+const dataDir = process.env.AGENTHUB_STATE_DIR ? path.resolve(process.env.AGENTHUB_STATE_DIR) : path.join(workspaceRoot, ".agenthub");
 const statePath = path.join(dataDir, "state.json");
 
 const now = () => new Date().toISOString();
@@ -121,7 +121,7 @@ function defaultState() {
           title: "实现本地会话 API",
           owner: "代码 Agent",
           detail: "提供 bootstrap、threads、messages、task-graph 等接口，并写入本地状态文件。",
-          status: "running",
+          status: "done",
           dependsOn: ["domain-model"],
           acceptanceCommand: "typecheck",
         },
@@ -138,10 +138,10 @@ function defaultState() {
           id: "executor",
           title: "接入本地执行器",
           owner: "部署 Agent",
-          detail: "通过白名单命令运行 typecheck、build、git diff 等操作，并把结果回写到会话。",
+          detail: "通过白名单命令运行 typecheck、build、smoke、git diff 等操作，并把结果回写到会话。",
           status: "todo",
           dependsOn: ["local-api"],
-          acceptanceCommand: "typecheck",
+          acceptanceCommand: "smoke",
         },
         {
           id: "workspace-untracked-audit",
@@ -555,7 +555,7 @@ function normalizeDependsOn(value) {
 
 function normalizeCommand(value) {
   const command = String(value || "").trim().toLowerCase();
-  return ["git:status", "git:diff", "typecheck", "build"].includes(command) ? command : "";
+  return ["git:status", "git:diff", "typecheck", "build", "smoke"].includes(command) ? command : "";
 }
 
 function defaultAcceptanceCommand(taskId) {
@@ -563,7 +563,7 @@ function defaultAcceptanceCommand(taskId) {
     "domain-model": "git:status",
     "local-api": "typecheck",
     "git-diff": "git:diff",
-    executor: "typecheck",
+    executor: "smoke",
     "workspace-untracked-audit": "git:status",
   }[taskId] || "";
 }
@@ -603,7 +603,8 @@ function inferAcceptanceCommand(task) {
   const text = `${task.id || ""} ${task.title || ""} ${task.owner || ""} ${task.detail || ""}`.toLowerCase();
   if (/(git|diff|代码变更|仓库)/i.test(text)) return "git:diff";
   if (/(build|构建|部署|预览|发布)/i.test(text)) return "build";
-  if (/(验收|测试|质量|typecheck|类型|闭环|执行器|api|接口|前端|实现)/i.test(text)) return "typecheck";
+  if (/(smoke|闭环|执行器|api|接口)/i.test(text)) return "smoke";
+  if (/(验收|测试|质量|typecheck|类型|前端|实现)/i.test(text)) return "typecheck";
   return "git:status";
 }
 
@@ -612,7 +613,7 @@ function agentName(agentId) {
 }
 
 function executorArtifact(run, options) {
-  const kind = run.command === "build" ? "build" : run.command === "typecheck" ? "test" : run.command === "git:diff" ? "diff" : "log";
+  const kind = run.command === "build" ? "build" : run.command === "typecheck" || run.command === "smoke" ? "test" : run.command === "git:diff" ? "diff" : "log";
   const status = run.status === "success" ? "ready" : "failed";
   const output = normalizeText(run.output || "(no output)", 180);
   return {

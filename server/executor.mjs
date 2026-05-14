@@ -7,6 +7,7 @@ const repoRoot = new URL("..", import.meta.url);
 const commandMap = new Map([
   ["typecheck", { file: "npm", args: ["run", "typecheck"] }],
   ["build", { file: "npm", args: ["run", "build"] }],
+  ["smoke", { file: "npm", args: ["run", "smoke"] }],
   ["git:status", { file: "git", args: ["status", "--short", "--untracked-files=all"] }],
   ["git:diff", { file: "git", args: ["diff", "--stat"] }],
 ]);

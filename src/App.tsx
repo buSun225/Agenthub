@@ -670,13 +670,14 @@ function Inspector({
         <div className="deploy-card">
           <span className={`deploy-badge ${deployment.status === "live" ? "is-live" : ""}`}>{deploymentLabel(deployment.status)}</span>
           <h2>Local Executor</h2>
-          <p>执行器只开放白名单命令。当前可跑 typecheck、build、git status 和 git diff。</p>
+          <p>执行器只开放白名单命令。当前可跑 smoke、typecheck、build、git status 和 git diff。</p>
           <div className="executor-row">
             <select value={command} onChange={(event) => onCommandChange(event.target.value)}>
               <option value="git:status">git:status</option>
               <option value="git:diff">git:diff</option>
               <option value="typecheck">typecheck</option>
               <option value="build">build</option>
+              <option value="smoke">smoke</option>
             </select>
             <button className="primary-button" type="button" onClick={onRunExecutor}>
               <Icon name="play" />
