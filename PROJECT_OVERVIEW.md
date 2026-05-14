@@ -58,7 +58,7 @@ npm.cmd run smoke
 - Provider：`aigocode`
 - Base URL：`https://api.aigocode.com`
 - Wire API：`responses`
-- Model：`gpt-5.5`
+- Model：`gpt-5.3-codex`
 - Reasoning effort：`xhigh`
 
 在项目 `.env.local` 中映射为：
@@ -66,7 +66,7 @@ npm.cmd run smoke
 ```bash
 AGENTHUB_LLM_PROVIDER=aigo
 AIGO_BASE_URL=https://api.aigocode.com
-AIGO_MODEL=gpt-5.5
+AIGO_MODEL=gpt-5.3-codex
 AIGO_API_STYLE=responses
 AGENTHUB_REASONING_EFFORT=xhigh
 AGENTHUB_LLM_TIMEOUT_MS=30000
@@ -78,4 +78,5 @@ AGENTHUB_LLM_TIMEOUT_MS=30000
 
 - 当前 Vite dev 在本机权限环境下会触发依赖预优化问题，因此 `npm run dev` 采用先 build 再托管 `dist` 的稳定模式。
 - LLM Provider 必须兼容 `responses` 或 `chat/completions` 接口，否则会自动降级为本地 fallback 回复。
+- AigoCode 的 `responses` 端点要求 API Key 所属分组支持第三方/API 调用；当前本地 key 对 `/responses` 返回 403 时，需在 AigoCode 控制台更换或开启对应 key 权限。
 - 工作区归因时需要区分项目源码、`.agenthub/` 本地状态、`dist/`、`.npm-cache/` 与日志等运行产物；日志文件不应纳入 Git。

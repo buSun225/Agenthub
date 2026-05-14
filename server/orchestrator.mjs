@@ -696,11 +696,15 @@ function fallbackExecutorSummary({ targetAgent, run, reason }) {
 }
 
 function fallbackReply({ targetAgent, userText, reason }) {
+  const configHint = /403|forbidden/i.test(reason)
+    ? "当前 AigoCode 返回 403，通常表示 API Key 未开启第三方/API 调用权限，或该 key 所属分组不支持当前模型/API。请在 AigoCode 控制台更换支持第三方调用的 key 后重启服务。"
+    : "下一步建议：配置 AIGO_API_KEY 或 OPENAI_API_KEY 后重试同一条消息；如果是在本地开发，可以先运行 git:status 或 typecheck，让我把真实工具结果写回会话。";
+
   return [
     `${reason}`,
     "",
     `${targetAgent.name} 先给出本地判断：你刚才的问题是“${userText}”。我会把它当作 ${targetAgent.role} 方向的问题继续推进。`,
-    "下一步建议：配置 AIGO_API_KEY 或 OPENAI_API_KEY 后重试同一条消息；如果是在本地开发，可以先运行 git:status 或 typecheck，让我把真实工具结果写回会话。",
+    configHint,
   ].join("\n");
 }
 
