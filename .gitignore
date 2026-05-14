@@ -1,4 +1,13 @@
 ﻿hatch-runs/
 hatch-pet-runs/
 fucking_test/
-
+node_modules/
+dist/
+.agenthub/
+.env
+.env.local
+npm-debug.log*
+agenthub-dev.*.log
+agenthub-test-api.*.log
+*.tsbuildinfo
+.npm-cache/

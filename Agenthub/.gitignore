@@ -1,9 +1,0 @@
-node_modules/
-dist/
-.agenthub/
-.env
-.env.local
-npm-debug.log*
-agenthub-dev.*.log
-agenthub-test-api.*.log
-*.tsbuildinfo

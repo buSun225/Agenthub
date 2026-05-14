@@ -17,7 +17,7 @@ AgentHub 是一个 IM 聊天式多 Agent 协作平台，目标是支持单聊、
 - `server/`：本地 API、状态持久化、ArtifactStore、Git Diff、执行器、LLM Orchestrator、静态服务器。
 - `scripts/dev.mjs`：同时启动 API 和静态 Web 服务。
 - `dist/`：构建后的前端产物。
-- 当前 Git 仓库根目录是 `C:\Users\MR\Documents\New project`，AgentHub 项目位于其中的 `Agenthub/` 子目录；Git 状态与执行器输出会以父仓库为基准。
+- 当前 Git 仓库根目录和项目根目录均为 `D:\codexxx\Agent`；Git 状态与执行器输出以该目录为基准。
 
 ## 核心流程
 
@@ -76,4 +76,4 @@ AGENTHUB_LLM_TIMEOUT_MS=30000
 
 - 当前 Vite dev 在本机权限环境下会触发依赖预优化问题，因此 `npm run dev` 采用先 build 再托管 `dist` 的稳定模式。
 - LLM Provider 必须兼容 `responses` 或 `chat/completions` 接口，否则会自动降级为本地 fallback 回复。
-- 工作区归因时需要区分 `Agenthub/` 项目源码、`.agenthub/` 本地状态、`dist/` 与日志等运行产物，以及父目录下其他工具生成目录；日志文件不应纳入 Git。
+- 工作区归因时需要区分项目源码、`.agenthub/` 本地状态、`dist/`、`.npm-cache/` 与日志等运行产物；日志文件不应纳入 Git。
