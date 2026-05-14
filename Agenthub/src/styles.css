@@ -691,7 +691,9 @@ h1 {
 .review-summary,
 .deploy-card,
 .browser-shell,
-.run-card {
+.run-card,
+.artifact-card,
+.empty-card {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: rgba(255, 255, 255, 0.76);
@@ -777,6 +779,87 @@ pre {
   border-style: dashed;
   color: var(--muted);
   background: rgba(255, 255, 255, 0.45);
+}
+
+.artifact-list {
+  display: grid;
+  gap: 10px;
+}
+
+.artifact-card {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+}
+
+.artifact-card strong {
+  font-size: 14px;
+}
+
+.artifact-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.artifact-head,
+.artifact-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.artifact-head small,
+.artifact-meta span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.artifact-kind {
+  border-radius: 999px;
+  padding: 4px 8px;
+  color: var(--blue);
+  background: rgba(47, 103, 216, 0.1);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.kind-test,
+.kind-preview {
+  color: var(--green);
+  background: rgba(34, 185, 133, 0.12);
+}
+
+.kind-build {
+  color: var(--amber);
+  background: rgba(217, 140, 36, 0.12);
+}
+
+.kind-diff {
+  color: var(--violet);
+  background: rgba(110, 99, 217, 0.12);
+}
+
+.artifact-failed {
+  border-color: rgba(230, 92, 115, 0.28);
+}
+
+.artifact-meta code {
+  min-width: 0;
+  overflow: hidden;
+  color: #526079;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.empty-card {
+  padding: 14px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .browser-shell {

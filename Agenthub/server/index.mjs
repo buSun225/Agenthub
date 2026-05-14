@@ -1,10 +1,12 @@
 import http from "node:http";
 import {
   addAgentReply,
+  addArtifact,
   addSystemAgentMessage,
   addUserMessage,
   applyTaskMutations,
   agents,
+  artifacts,
   createThread,
   deployment,
   executorRuns,
@@ -37,6 +39,7 @@ const server = http.createServer(async (request, response) => {
         agents,
         threads,
         taskGraph,
+        artifacts,
         diff: await readGitDiff(),
         executorRuns,
         deployment,
@@ -51,6 +54,7 @@ const server = http.createServer(async (request, response) => {
         agents,
         threads,
         taskGraph,
+        artifacts,
         diff: await readGitDiff(),
         executorRuns,
         deployment,
@@ -143,6 +147,14 @@ const server = http.createServer(async (request, response) => {
           status: "live",
           url: "https://preview.agenthub.local/run/local",
           logs: ["build completed", "checks passed", "preview live: /run/local"],
+        });
+        addArtifact({
+          kind: "preview",
+          title: "本地预览发布",
+          summary: "预览流水线完成，构建检查通过并生成本地预览链接。",
+          source: "部署 Agent",
+          status: "ready",
+          ref: "https://preview.agenthub.local/run/local",
         });
       }, 700);
       send(response, 200, deployment);

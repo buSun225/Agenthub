@@ -104,6 +104,18 @@ export type Deployment = {
   updatedAt: string;
 };
 
+export type Artifact = {
+  id: string;
+  kind: "diff" | "test" | "build" | "preview" | "document" | "log";
+  title: string;
+  summary: string;
+  source: string;
+  status: "ready" | "running" | "failed";
+  ref?: string;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+};
+
 export type OrchestratorStatus = {
   provider: "openai" | "aigo" | "fallback";
   configured: boolean;
@@ -118,6 +130,7 @@ export type BootstrapPayload = {
   agents: Agent[];
   threads: Thread[];
   taskGraph: TaskGraph;
+  artifacts: Artifact[];
   diff: GitDiffSummary;
   executorRuns: ExecutorRun[];
   deployment: Deployment;

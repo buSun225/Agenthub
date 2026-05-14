@@ -155,6 +155,18 @@ function defaultState() {
       ],
     },
     executorRuns: [],
+    artifacts: [
+      {
+        id: "artifact-readme",
+        kind: "document",
+        title: "AgentHub MVP 项目说明",
+        summary: "记录 AgentHub 的产品目标、MVP 范围、核心数据模型和本地运行方式。",
+        source: "系统初始化",
+        status: "ready",
+        ref: "README.md",
+        createdAt: now(),
+      },
+    ],
     deployment: {
       id: "preview",
       status: "idle",
@@ -184,6 +196,7 @@ function normalizeState(loaded, fallback) {
     threads: Array.isArray(loaded.threads) && loaded.threads.length ? loaded.threads : fallback.threads,
     taskGraph: loaded.taskGraph?.nodes ? normalizeTaskGraph(loaded.taskGraph) : fallback.taskGraph,
     executorRuns: Array.isArray(loaded.executorRuns) ? loaded.executorRuns : fallback.executorRuns,
+    artifacts: Array.isArray(loaded.artifacts) ? loaded.artifacts : fallback.artifacts,
     deployment: loaded.deployment || fallback.deployment,
   };
 }
@@ -208,6 +221,7 @@ export const agents = state.agents;
 export const threads = state.threads;
 export const taskGraph = state.taskGraph;
 export const executorRuns = state.executorRuns;
+export const artifacts = state.artifacts;
 export const deployment = state.deployment;
 
 export function persistState() {
@@ -365,6 +379,25 @@ export function updateDeployment(next) {
   return deployment;
 }
 
+export function addArtifact(next) {
+  const artifact = {
+    id: next.id || randomUUID(),
+    kind: normalizeArtifactKind(next.kind),
+    title: normalizeText(next.title, 96) || "未命名产物",
+    summary: normalizeText(next.summary, 280),
+    source: normalizeText(next.source, 48) || "AgentHub",
+    status: normalizeArtifactStatus(next.status) || "ready",
+    ref: normalizeText(next.ref, 160),
+    metadata: next.metadata && typeof next.metadata === "object" ? next.metadata : undefined,
+    createdAt: next.createdAt || now(),
+  };
+
+  artifacts.unshift(artifact);
+  if (artifacts.length > 20) artifacts.splice(20);
+  persistState();
+  return artifact;
+}
+
 export function addExecutorRun(run) {
   executorRuns.unshift(run);
   if (executorRuns.length > 10) executorRuns.splice(10);
@@ -381,6 +414,7 @@ export function resetRuntimeState() {
   taskGraph.updatedAt = next.taskGraph.updatedAt;
   taskGraph.nodes.splice(0, taskGraph.nodes.length, ...next.taskGraph.nodes);
   executorRuns.splice(0, executorRuns.length);
+  artifacts.splice(0, artifacts.length, ...next.artifacts);
   Object.assign(deployment, next.deployment);
 
   state.version = next.version;
@@ -402,6 +436,8 @@ export function completeExecutorRun(runId, patch, options = {}) {
   if (options.taskId) {
     touchTask(options.taskId, taskStatusFromRun(run, options.taskId));
   }
+
+  addArtifact(executorArtifact(run, options));
 
   addSystemAgentMessage({
     agentId: run.command.startsWith("git:") ? "code" : "qa",
@@ -497,6 +533,16 @@ function normalizeTaskStatus(value) {
   return ["done", "running", "todo", "blocked"].includes(status) ? status : "";
 }
 
+function normalizeArtifactKind(value) {
+  const kind = String(value || "").trim().toLowerCase();
+  return ["diff", "test", "build", "preview", "document", "log"].includes(kind) ? kind : "log";
+}
+
+function normalizeArtifactStatus(value) {
+  const status = String(value || "").trim().toLowerCase();
+  return ["ready", "running", "failed"].includes(status) ? status : "ready";
+}
+
 function normalizeText(value, maxLength) {
   const text = String(value || "").replace(/\s+/g, " ").trim();
   return text.length > maxLength ? text.slice(0, maxLength) : text;
@@ -563,4 +609,24 @@ function inferAcceptanceCommand(task) {
 
 function agentName(agentId) {
   return agents.find((agent) => agent.id === agentId)?.name;
+}
+
+function executorArtifact(run, options) {
+  const kind = run.command === "build" ? "build" : run.command === "typecheck" ? "test" : run.command === "git:diff" ? "diff" : "log";
+  const status = run.status === "success" ? "ready" : "failed";
+  const output = normalizeText(run.output || "(no output)", 180);
+  return {
+    kind,
+    title: `${run.command} 执行记录`,
+    summary: `${run.command} ${run.status === "success" ? "执行成功" : "执行失败"}。${output}`,
+    source: options.taskId ? `任务 ${options.taskId}` : "本地执行器",
+    status,
+    ref: run.id,
+    metadata: {
+      command: run.command,
+      taskId: options.taskId,
+      startedAt: run.startedAt,
+      finishedAt: run.finishedAt,
+    },
+  };
 }

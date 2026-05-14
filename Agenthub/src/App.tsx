@@ -3,6 +3,7 @@ import { api } from "./api";
 import type {
   Agent,
   AgentId,
+  Artifact,
   BootstrapPayload,
   CollaborationMode,
   Deployment,
@@ -13,7 +14,7 @@ import type {
   Thread,
 } from "./types";
 
-type InspectorPanel = "tasks" | "diff" | "preview" | "deploy";
+type InspectorPanel = "tasks" | "artifacts" | "diff" | "preview" | "deploy";
 
 const navItems = [
   { id: "workspace", label: "协作工作台", icon: "chat" },
@@ -355,6 +356,7 @@ function App() {
 
           <Inspector
             command={command}
+            artifacts={payload.artifacts}
             deployment={payload.deployment}
             diff={payload.diff}
             executorRuns={payload.executorRuns}
@@ -484,6 +486,7 @@ function ChatFeed({
 
 function Inspector({
   command,
+  artifacts,
   deployment,
   diff,
   executorRuns,
@@ -499,6 +502,7 @@ function Inspector({
   taskGraph,
 }: {
   command: string;
+  artifacts: Artifact[];
   deployment: Deployment;
   diff: GitDiffSummary;
   executorRuns: ExecutorRun[];
@@ -516,7 +520,7 @@ function Inspector({
   return (
     <aside className="inspector" aria-label="任务与预览">
       <div className="inspector-tabs" role="tablist">
-        {(["tasks", "diff", "preview", "deploy"] as InspectorPanel[]).map((item) => (
+        {(["tasks", "artifacts", "diff", "preview", "deploy"] as InspectorPanel[]).map((item) => (
           <button className={panel === item ? "is-active" : ""} key={item} type="button" onClick={() => setPanel(item)}>
             {panelLabel(item)}
           </button>
@@ -558,6 +562,30 @@ function Inspector({
               </article>
             );
           })}
+        </div>
+      </section>
+
+      <section className={`inspector-panel ${panel === "artifacts" ? "is-active" : ""}`}>
+        <div className="section-title">
+          <span>产物时间线</span>
+          <strong>{artifacts.length}</strong>
+        </div>
+        <div className="artifact-list">
+          {artifacts.map((artifact) => (
+            <article className={`artifact-card artifact-${artifact.status}`} key={artifact.id}>
+              <div className="artifact-head">
+                <span className={`artifact-kind kind-${artifact.kind}`}>{artifactKindLabel(artifact.kind)}</span>
+                <small>{formatTime(artifact.createdAt)}</small>
+              </div>
+              <strong>{artifact.title}</strong>
+              <p>{artifact.summary}</p>
+              <div className="artifact-meta">
+                <span>{artifact.source}</span>
+                {artifact.ref ? <code>{artifact.ref}</code> : null}
+              </div>
+            </article>
+          ))}
+          {!artifacts.length ? <div className="empty-card">暂无产物。运行执行器或发布预览后会自动记录。</div> : null}
         </div>
       </section>
 
@@ -686,11 +714,35 @@ function Inspector({
 function panelLabel(panel: InspectorPanel) {
   const labels: Record<InspectorPanel, string> = {
     tasks: "任务",
+    artifacts: "产物",
     diff: "Diff",
     preview: "预览",
     deploy: "部署",
   };
   return labels[panel];
+}
+
+function artifactKindLabel(kind: Artifact["kind"]) {
+  const labels: Record<Artifact["kind"], string> = {
+    diff: "Diff",
+    test: "测试",
+    build: "构建",
+    preview: "预览",
+    document: "文档",
+    log: "日志",
+  };
+  return labels[kind];
+}
+
+function formatTime(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString("zh-CN", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function statusLabel(status: string) {
