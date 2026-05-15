@@ -9,7 +9,7 @@ AgentHub 是一个 IM 聊天式多 Agent 协作平台，目标是支持单聊、
 - 前端：Vite + React + TypeScript。
 - 后端：Node.js 原生 HTTP API。
 - 本地状态：`.agenthub/state.json`，默认不提交到 Git。
-- LLM Provider：可配置 OpenAI 兼容接口，当前按全局规则默认使用 AigoCode。
+- LLM Provider：可配置 OpenAI 兼容接口，当前本地验证通过的是 `xxtf.fun` 中转站的 OpenAI-compatible `chat/completions`。
 
 ## 目录结构
 
@@ -53,15 +53,35 @@ npm.cmd run smoke
 
 ## LLM 配置约定
 
-当前按全局规则使用：
+当前本地推荐配置：
+
+- Provider：`openai`
+- Base URL：`https://xxtf.fun/v1`
+- Wire API：`chat/completions`
+- Model：`gpt-5.5`
+- Reasoning effort：`xhigh`
+
+在项目 `.env.local` 中映射为：
+
+```bash
+AGENTHUB_LLM_PROVIDER=openai
+OPENAI_BASE_URL=https://xxtf.fun/v1
+OPENAI_API_STYLE=chat
+AGENTHUB_OPENAI_MODEL=gpt-5.5
+AGENTHUB_OPENAI_FALLBACK_MODEL=gpt-5.5
+AGENTHUB_REASONING_EFFORT=xhigh
+AGENTHUB_LLM_TIMEOUT_MS=30000
+```
+
+`OPENAI_API_KEY` 需要由用户填入或通过安全环境变量注入，不应提交到 Git。
+
+AigoCode 备选配置：
 
 - Provider：`aigocode`
 - Base URL：`https://api.aigocode.com`
 - Wire API：`responses`
 - Model：`gpt-5.3-codex`
 - Reasoning effort：`xhigh`
-
-在项目 `.env.local` 中映射为：
 
 ```bash
 AGENTHUB_LLM_PROVIDER=aigo
