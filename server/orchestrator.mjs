@@ -49,11 +49,7 @@ export async function orchestrateReply({ agents, thread, taskGraph, mode, select
   const model = providerConfig.model;
   const reasoningEffort = providerConfig.reasoningEffort;
   const diff = await readGitDiff();
-  const recentMessages = thread.messages.slice(-10).map((message) => ({
-    role: message.user ? "user" : "assistant",
-    speaker: message.user ? "用户" : agents.find((agent) => agent.id === message.agentId)?.name || "Agent",
-    text: message.text,
-  }));
+  const recentMessages = getRecentMessages(thread, agents, 6);
 
   const prompt = [
     `当前会话: ${thread.title}`,
@@ -182,11 +178,7 @@ export async function summarizeExecutorRun({ agents, thread, taskGraph, run }) {
   }
 
   const diff = await readGitDiff();
-  const recentMessages = thread.messages.slice(-8).map((message) => ({
-    role: message.user ? "user" : "assistant",
-    speaker: message.user ? "用户" : agents.find((agent) => agent.id === message.agentId)?.name || "Agent",
-    text: message.text,
-  }));
+  const recentMessages = getRecentMessages(thread, agents, 6);
 
   const prompt = [
     `当前会话: ${thread.title}`,
@@ -422,7 +414,8 @@ async function createResponsesResponse({ providerConfig, reasoningEffort, instru
 
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(payload.error?.message || `${providerConfig.provider} responses request failed with ${response.status}`);
+    const message = payload.error?.message || `${providerConfig.provider} responses request failed`;
+    throw new Error(`${message} (${providerConfig.provider} responses HTTP ${response.status})`);
   }
 
   const text = extractOutputText(payload);
@@ -453,16 +446,23 @@ async function createChatCompletion({ providerConfig, instructions, input }) {
 
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(payload.error?.message || `${providerConfig.provider} chat request failed with ${response.status}`);
+    const message = payload.error?.message || `${providerConfig.provider} chat request failed`;
+    throw new Error(`${message} (${providerConfig.provider} chat HTTP ${response.status})`);
   }
 
   const content = payload.choices?.[0]?.message?.content;
-  if (typeof content === "string") return content.trim();
+  if (typeof content === "string") {
+    const text = content.trim();
+    if (text) return text;
+    throw new Error(`${providerConfig.provider} chat response did not include text output`);
+  }
   if (Array.isArray(content)) {
-    return content
+    const text = content
       .map((part) => (typeof part === "string" ? part : part.text || ""))
       .join("\n")
       .trim();
+    if (text) return text;
+    throw new Error(`${providerConfig.provider} chat response did not include text output`);
   }
   throw new Error(`${providerConfig.provider} chat response did not include text output`);
 }
@@ -661,6 +661,14 @@ function trimTrailingSlash(value) {
   return String(value || "").replace(/\/+$/, "");
 }
 
+function getRecentMessages(thread, agents, limit) {
+  return thread.messages.slice(-limit).map((message) => ({
+    role: message.user ? "user" : "assistant",
+    speaker: message.user ? "用户" : agents.find((agent) => agent.id === message.agentId)?.name || "Agent",
+    text: clipText(message.text, 900),
+  }));
+}
+
 function chooseExecutorAgent(command) {
   if (command.startsWith("git:")) return "code";
   if (command === "build") return "ops";
@@ -696,16 +704,36 @@ function fallbackExecutorSummary({ targetAgent, run, reason }) {
 }
 
 function fallbackReply({ targetAgent, userText, reason }) {
-  const configHint = /403|forbidden/i.test(reason)
-    ? "当前 AigoCode 返回 403，通常表示 API Key 未开启第三方/API 调用权限，或该 key 所属分组不支持当前模型/API。请在 AigoCode 控制台更换支持第三方调用的 key 后重启服务。"
-    : "下一步建议：配置 AIGO_API_KEY 或 OPENAI_API_KEY 后重试同一条消息；如果是在本地开发，可以先运行 git:status 或 typecheck，让我把真实工具结果写回会话。";
-
   return [
     `${reason}`,
     "",
     `${targetAgent.name} 先给出本地判断：你刚才的问题是“${userText}”。我会把它当作 ${targetAgent.role} 方向的问题继续推进。`,
-    configHint,
+    fallbackHint(reason),
   ].join("\n");
+}
+
+function fallbackHint(reason) {
+  if (/未配置完整|缺少 API 配置|api_key|apikey|api key/i.test(reason)) {
+    return "下一步建议：检查当前 Provider 对应的 API Key 和 Base URL，补齐后重启本地服务；在配置完成前，AgentHub 会继续使用本地降级回复，避免会话中断。";
+  }
+
+  if (/401|403|forbidden|unauthorized|permission|鉴权|权限/i.test(reason)) {
+    return "下一步建议：检查 API Key 是否有效、账户/分组是否允许第三方 API 调用、当前模型是否在该 key 的权限范围内；修正后重启本地服务并重试同一条消息。";
+  }
+
+  if (/did not include text output|empty|空文本|空输出/i.test(reason)) {
+    return "下一步建议：接口已返回但没有有效文本输出，优先确认中转站是否支持当前模型的响应格式；可以切换模型或 API style 后重试。";
+  }
+
+  if (/timeout|aborted|UND_ERR_CONNECT_TIMEOUT|ETIMEDOUT/i.test(reason)) {
+    return "下一步建议：请求已超时，先重试；如果反复出现，请提高 AGENTHUB_LLM_TIMEOUT_MS、缩短上下文或切换响应更快的模型。";
+  }
+
+  if (/fetch failed|ECONN|EACCES|ENOTFOUND|network|socket|TLS/i.test(reason)) {
+    return "下一步建议：这是网络连接失败，先检查本机到 Provider Base URL 的连通性、代理/防火墙和 DNS；AgentHub 已保留本地回复以保证流程不中断。";
+  }
+
+  return "下一步建议：保留当前错误信息，检查 Provider 配置、模型名和接口兼容性；本地开发时可先运行 git:status、git:diff 或 typecheck 推进项目闭环。";
 }
 
 function fallbackTaskMutations(userText, targetAgent) {

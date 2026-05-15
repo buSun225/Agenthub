@@ -31,10 +31,12 @@ AgentHub 是一个 IM 聊天式多 Agent 协作平台，目标是支持单聊、
 8. 执行器、Diff、构建、预览和文档类结果会沉淀为 `artifacts` 产物时间线，前端检查器提供“产物”页查看来源、摘要、引用和状态。
 9. Orchestrator 会读取执行器输出摘要，再由对应 Agent 追加一条结果总结和下一步建议；总结仍可生成白名单工具建议按钮。
 10. Orchestrator 回复可以携带受控结构化任务标记，后端解析后新增或更新任务图；任务节点会记录 `source`，用于区分手动任务和 Agent 同步任务。
-11. LLM 请求默认有超时保护，超时或失败时返回本地 fallback；当用户明确要求任务图/任务节点同步时，本地 fallback 会补充一个保守的下一步任务。
-12. 任务节点支持 `acceptanceCommand`，只能绑定执行器白名单命令；前端任务卡提供“验收”按钮，执行成功/失败会自动把该任务标记为 `done`/`blocked` 并写回会话。
-13. Git 状态支持结构化读取：`/api/git/status` 返回 tracked/untracked/external 统计和条目；Diff 面板会展示未跟踪项，`workspace-untracked-audit` 任务用 `git:status` 验收，只有工作区干净才算完成。
-14. `npm.cmd run smoke` 会在临时端口和隔离状态目录启动 API，验证 bootstrap、任务图、产物、执行器命令白名单和会话读写接口；执行器任务默认用 `smoke` 验收。
+11. LLM 请求默认有超时保护，超时或失败时返回本地 fallback；当用户明确要求任务图/任务节点同步时，本地 fallback 会补充一个保守的下一步任务；403/鉴权失败、空文本输出、超时和网络失败会返回不同的可操作提示。
+12. Orchestrator 发送给 LLM 的会话历史默认只保留最近 6 条，并将单条历史消息截断到 900 字符，避免旧错误和长回复堆叠导致中转 API 超时。
+13. 任务节点支持 `acceptanceCommand`，只能绑定执行器白名单命令；前端任务卡提供“验收”按钮，执行成功/失败会自动把该任务标记为 `done`/`blocked` 并写回会话。
+14. Git 状态支持结构化读取：`/api/git/status` 返回 tracked/untracked/external 统计和条目；Diff 面板会展示未跟踪项，`workspace-untracked-audit` 任务用 `git:status` 验收，只有工作区干净才算完成。
+15. `npm.cmd run smoke` 会在临时端口、隔离状态目录和本地 mock LLM 下启动 API，验证 bootstrap、任务图、产物、Git Diff、执行器命令白名单、会话读写、工具建议解析，以及 LLM 403/空输出/超时失败兜底；执行器任务和 LLM 失败兜底任务默认用 `smoke` 验收。
+16. `workspace-untracked-audit` 的验收只关注 `git status` 中的 `??` 未跟踪项；已跟踪源码变更不会阻止该任务完成。
 
 ## 运行方式
 
@@ -70,7 +72,7 @@ OPENAI_API_STYLE=chat
 AGENTHUB_OPENAI_MODEL=gpt-5.5
 AGENTHUB_OPENAI_FALLBACK_MODEL=gpt-5.5
 AGENTHUB_REASONING_EFFORT=xhigh
-AGENTHUB_LLM_TIMEOUT_MS=30000
+AGENTHUB_LLM_TIMEOUT_MS=90000
 ```
 
 `OPENAI_API_KEY` 需要由用户填入或通过安全环境变量注入，不应提交到 Git。

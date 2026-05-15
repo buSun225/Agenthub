@@ -593,7 +593,10 @@ function taskStatusFromRun(run, taskId) {
   if (run.status !== "success") return "blocked";
 
   if (taskId === "workspace-untracked-audit") {
-    return String(run.output || "").trim() ? "blocked" : "done";
+    const hasUntracked = String(run.output || "")
+      .split(/\r?\n/)
+      .some((line) => line.trimStart().startsWith("??"));
+    return hasUntracked ? "blocked" : "done";
   }
 
   return "done";
